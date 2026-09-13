@@ -40,6 +40,15 @@ const DEFAULT_API_BASE =
 
 const API_BASE = (import.meta.env.VITE_API_BASE_URL || DEFAULT_API_BASE).replace(/\/$/, "");
 
+function humanize(value: string): string {
+  return value.replace(/_/g, " ");
+}
+
+function formatAmount(value: string): string {
+  const number = Number(value);
+  return Number.isFinite(number) ? number.toLocaleString("en-IN") : value;
+}
+
 async function apiJson<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, init);
   if (!response.ok) {
@@ -102,17 +111,38 @@ function App() {
         </select>
         {request && (
           <section className="plain">
-            <h2>{request.request_type.replace("_", " ")}</h2>
+            <h2>{humanize(request.request_type)}</h2>
             <p>{request.request_text}</p>
             <dl>
-              <dt>Amount</dt><dd>{request.requested_amount}</dd>
+              <dt>Amount</dt><dd>{formatAmount(request.requested_amount)}</dd>
               <dt>Deadline</dt><dd>{request.desired_completion_date}</dd>
-              <dt>Partial</dt><dd>{request.allows_partial_payment}</dd>
+              <dt>Partial</dt><dd>{request.allows_partial_payment === "true" ? "Yes" : "No"}</dd>
             </dl>
           </section>
         )}
       </aside>
       <section className="content">
+        {request && (
+          <section className="request-summary">
+            <span className="eyebrow">Selected request</span>
+            <h1>{humanize(request.request_type)}</h1>
+            <p>{request.request_text}</p>
+            <div className="request-meta">
+              <div>
+                <span>Amount</span>
+                <strong>{formatAmount(request.requested_amount)}</strong>
+              </div>
+              <div>
+                <span>Deadline</span>
+                <strong>{request.desired_completion_date}</strong>
+              </div>
+              <div>
+                <span>Partial</span>
+                <strong>{request.allows_partial_payment === "true" ? "Yes" : "No"}</strong>
+              </div>
+            </div>
+          </section>
+        )}
         {loading && <div className="notice"><Loader2 className="spin" /> Analyzing request</div>}
         {error && <div className="notice error"><AlertCircle /> {error}</div>}
         {analysis && (
@@ -121,7 +151,7 @@ function App() {
               <CheckCircle2 />
               <div>
                 <span>Decision</span>
-                <strong>{analysis.affordability_status.replace(/_/g, " ").toUpperCase()}</strong>
+                <strong>{humanize(analysis.affordability_status).toUpperCase()}</strong>
               </div>
             </div>
             <div className="grid">
@@ -132,7 +162,7 @@ function App() {
               </section>
               <section>
                 <h3>Recommended Method</h3>
-                <p className="metric">{analysis.recommended_payment_method.replace("_", " ")}</p>
+                <p className="metric">{humanize(analysis.recommended_payment_method)}</p>
                 <span>selected by deterministic ranking</span>
               </section>
               <section>
