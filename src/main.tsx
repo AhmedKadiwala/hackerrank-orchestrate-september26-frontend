@@ -27,18 +27,42 @@ type Analysis = {
   evidence_summary?: Array<Record<string, string>>;
 };
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+type Health = {
+  ok: boolean;
+  requests: number;
+  db?: Record<string, number | boolean>;
+};
+
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || "http://localhost:8000").replace(/\/$/, "");
+
+async function apiJson<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(`${API_BASE}${path}`, init);
+  if (!response.ok) {
+    let detail = `API ${response.status}`;
+    try {
+      const body = await response.json();
+      detail = body.detail || body.error || detail;
+    } catch {
+      // Keep the status-only fallback for non-JSON failures.
+    }
+    throw new Error(detail);
+  }
+  return response.json();
+}
 
 function App() {
   const [requests, setRequests] = useState<RequestRow[]>([]);
   const [selected, setSelected] = useState("");
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
+  const [health, setHealth] = useState<Health | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/requests`)
-      .then((r) => r.json())
+    apiJson<Health>("/api/health")
+      .then(setHealth)
+      .catch((e) => setError(String(e)));
+    apiJson<RequestRow[]>("/api/requests")
       .then((rows) => {
         setRequests(rows);
         setSelected(rows[0]?.request_id ?? "");
@@ -50,11 +74,7 @@ function App() {
     if (!selected) return;
     setLoading(true);
     setError("");
-    fetch(`${API_BASE}/api/analyze/${selected}`, { method: "POST" })
-      .then((r) => {
-        if (!r.ok) throw new Error(`API ${r.status}`);
-        return r.json();
-      })
+    apiJson<Analysis>(`/api/analyze/${selected}`, { method: "POST" })
       .then(setAnalysis)
       .catch((e) => setError(String(e)))
       .finally(() => setLoading(false));
@@ -68,6 +88,10 @@ function App() {
     <main>
       <aside>
         <div className="brand"><WalletCards size={22} /> Buy or Wait</div>
+        <div className="api-status">
+          <span>{health?.ok ? "API connected" : "API pending"}</span>
+          <small>{API_BASE}</small>
+        </div>
         <select value={selected} onChange={(e) => setSelected(e.target.value)}>
           {requests.map((r) => <option key={r.request_id}>{r.request_id}</option>)}
         </select>

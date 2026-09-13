@@ -24,7 +24,7 @@ Use these settings:
 - Build command: `npm run build`
 - Output directory: `dist`
 
-Set this Vercel environment variable:
+Set this Vercel environment variable to the Django backend running on Render:
 
 ```env
 VITE_API_BASE_URL=https://your-render-backend.onrender.com
@@ -35,3 +35,9 @@ After Vercel gives you the production URL, add it to the backend Render variable
 ```env
 BACKEND_CORS_ORIGINS=https://your-vercel-app.vercel.app
 ```
+
+The frontend calls these Django API routes:
+
+- `GET /api/health`
+- `GET /api/requests`
+- `POST /api/analyze/<request_id>`
